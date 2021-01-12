@@ -40,7 +40,25 @@ module Config =
       match c with
       |Inter(i, s) -> (print_string "Inter ") ; (P.printInstr i) ; (S.printState s)
       |Final(s) -> (print_string "Final "); (S.printState s)
-  end
+  
+
+(* ================================================================================ *)
+(* Version bis de faire_un_pas *)
+    
+    let rec faire_un_pas' (instr: P.instr) (state: S.state) : config =
+      match instr with
+      |P.Skip -> Final(state)
+      |P.Assign(v1, v2) -> let a = (S.execAffect instr state ) in Final(a) 
+      |P.Seq(i1, i2) -> (match (faire_un_pas i1 state) with
+                         |Inter(i, s) -> Inter(P.Seq(i, i2), s)
+                         |Final(s) -> Inter(i2,s) 
+                        )
+      |P.If(e, i1, i2) -> if (eval e state) then Inter(i1, state) else Inter(i2, state)
+      |P.While(e, i) -> (match (eval e state) with
+                         |true -> Inter(P.Seq(i, P.While(e, i)), state)
+                         |false -> Final(state)
+                        )
+    end
 
 (*
 module C = Config
