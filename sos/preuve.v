@@ -494,3 +494,55 @@ Lemma f_SOS_1_compl : forall i s c, SOS_1 i s c -> c = f_SOS_1 i s.
 Proof.
 Admitted.
 
+
+(* ================================================================================ *)
+
+
+Inductive SOS_1': Winstr -> state -> config -> Prop :=
+| SOS_Skip'     : forall s,
+                  SOS_1' Skip s (Final s)
+
+| SOS_Assign'   : forall x a s,
+                  SOS_1' (Assign x a) s (Final (update s x (evalA a s)))
+
+| SOS_Seqf'     : forall i1 i2 s s1,
+                  SOS_1' i1 s (Final s1) ->
+                  SOS_1' (Seq i1 i2) s (Inter i2 s1)
+| SOS_Seqi'     : forall i1 i1' i2 s s1,
+                  SOS_1' i1 s (Inter i1' s1) ->
+                  SOS_1' (Seq i1 i2) s (Inter (Seq i1' i2) s1)
+
+| SOS_If_true'  : forall b i1 i2 s,
+                  evalB b s = true  ->
+                  SOS_1' (If b i1 i2) s (Inter i1 s)
+| SOS_If_false' : forall b i1 i2 s,
+                  evalB b s = false ->
+                  SOS_1' (If b i1 i2) s (Inter i2 s)
+
+| SOS_While_true'  : forall b i s,
+                     evalB b s = true  ->
+                     SOS_1' (While b i) s (Inter (Seq i (While b i)) s)
+| SOS_While_false' : forall b i s,
+                     evalB b s = false  ->
+                     SOS_1' (While b i) s (Final s)
+.
+
+Fixpoint f_SOS_1' (i : Winstr) (s : state) : config :=
+  match i with
+  |Skip => Final s
+  |Assign x a => Final (update s x (evalA a s)) 
+  |Seq i1 i2 => match(f_SOS_1 i1 s) with
+                |Inter i state => Inter (Seq i i2) state
+                |Final state => Inter i2 state
+                end
+  |If b i1 i2 => match(evalB b s) with
+                 |false => Inter i2 s
+                 |true => Inter i1 s
+                 end
+                   
+  (*while à faire*)
+  |While b i => match(evalB b s) with
+                |false => Final s
+                |true => Inter (Seq i (While b i)) s
+                end
+  end.
